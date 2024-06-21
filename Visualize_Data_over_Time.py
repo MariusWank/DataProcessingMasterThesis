@@ -92,10 +92,10 @@ def process_folder(folder, num_of_timesteps):
             mean_length_per_timestep, mean_branches_per_timestep, mean_pierce_percent_per_timestep)
 
 
-def main():
+def main(label_list):
     # Read the CSV files
     root = Path("Data_to_Vis")
-    folders = [file for file in root.iterdir() if file.is_dir()]
+    folders = sorted([file for file in root.iterdir() if file.is_dir()])
 
     # Create dataframe from results of the parameter combination
     df = pd.read_csv(folders[0] / "measurements" / "agent-statistics.csv", delimiter=';')
@@ -115,38 +115,44 @@ def main():
 
     # Process each folder and generate plots for each category
     categories = ['hyphal length', 'number of branches', 'pierce percentage']
+    colors = plt.colormaps["tab10"]
+
     for i, category in enumerate(categories):
+        # Create Figure
+        plt.figure(figsize=(6, 4))
+        plt.style.use("seaborn-v0_8-whitegrid")
 
         # Plot data in figure
         for j, folder in enumerate(folders):
-            # Create Figure
-            plt.figure(figsize=(6, 4))
-            plt.style.use("seaborn-v0_8-whitegrid")
-
             mean_data_over_time = data_list[j][i]
             mean_data_per_run = data_list[j][3+i]
+            color = colors(j)  # Get the color for this parameter set
 
             # Plot line over time
-            plt.plot(timesteps, mean_data_over_time)
-            plt.errorbar(timesteps, mean_data_over_time, yerr=np.std(mean_data_per_run, axis=1), fmt=".k", elinewidth=1, capsize=3)
+            plt.plot(timesteps, mean_data_over_time, label=label_list[j], marker=' ', markersize=5,
+                     linestyle='-', color=color)
+            plt.errorbar(timesteps, mean_data_over_time, yerr=np.std(mean_data_per_run, axis=1), elinewidth=1,
+                         capsize=3, color=color, marker=".")
 
-            # Create formatting for all plots
-            plt.title('Mean {} over time for {} runs '.format(category, number_of_runs))
-            plt.xlabel('Time in minutes')
-            plt.xticks(np.arange(min_time, max_time+1, 60))
-            y_label_str = category.capitalize()
-            if category == "hyphal length":
-                y_label_str += " in µm"
-            if category == "pierce percentage":
-                y_label_str = "Pierced conidia in %"
-            plt.ylabel(y_label_str)
+        # Create formatting for all plots
+        plt.title('Mean {} over time for {} runs '.format(category, number_of_runs))
+        plt.xlabel('Time in minutes')
+        plt.xticks(np.arange(min_time, max_time+1, 60))
+        y_label_str = category.capitalize()
+        if category == "hyphal length":
+            y_label_str += " in µm"
+        if category == "pierce percentage":
+            y_label_str = "Pierced conidia in %"
+        plt.ylabel(y_label_str)
+        plt.legend()
 
-            # Save the plot as an image
-            plt.savefig(
-                root / '{}_{}_over_time.png'.format(os.path.basename(folder), category.lower().replace(" ", "_")),
-                bbox_inches='tight')
-            plt.close()
+        # Save the plot as an image
+        plt.savefig(
+            root / '{}_over_time.png'.format(category.lower().replace(" ", "_")),
+            bbox_inches='tight')
+        plt.close()
 
 
 if __name__ == "__main__":
-    main()
+    labels = ["$b_{delay}=0 min$", "$b_{delay}=1min$", "$b_{delay}=100µm$"]
+    main(labels)

@@ -45,7 +45,7 @@ def process_folder(folder):
         hyphal_length_per_conidium_list.append(hyphal_length / number_of_conidia)
 
         # Calculate coverage in µm² on upper surface
-        all_sphere_on_upper_surface_df = all_individual_spheres_df[all_individual_spheres_df["distance_to_upper_surface"] != 0]
+        all_sphere_on_upper_surface_df = all_individual_spheres_df[all_individual_spheres_df["distance_to_upper_surface"] == 0]
         number_of_spheres_on_upper_surface = all_sphere_on_upper_surface_df.shape[0]
         upper_hyphal_length = (2 * radius + (number_of_spheres_on_upper_surface-1) * step_length)
         coverage = upper_hyphal_length * 2*radius
@@ -88,7 +88,7 @@ def process_folder(folder):
 def main(mean_length, mean_num_branches, mean_branch_level, mean_HGU, pierce_percentage, data_list_transfer=None):
     # Read the CSV files
     root = Path("Data_to_Vis")
-    folders = [file for file in root.iterdir() if file.is_dir()]
+    folders = sorted([file for file in root.iterdir() if file.is_dir()])
 
     # Create dataframe from results of the parameter combination
     df = pd.read_csv(folders[0] / "measurements" / "agent-statistics.csv", delimiter=';')
@@ -109,6 +109,7 @@ def main(mean_length, mean_num_branches, mean_branch_level, mean_HGU, pierce_per
 
     # Process each folder and generate plots for each category
     categories = ['hyphal length', 'number of branches', 'branch level', 'hyphal growth unit', 'coverage', "pierce percentage"]
+
     for i, category in enumerate(categories):
         # Create Figure
         plt.figure(figsize=(6, 4))
