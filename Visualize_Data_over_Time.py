@@ -92,9 +92,9 @@ def process_folder(folder, num_of_timesteps):
             mean_length_per_timestep, mean_branches_per_timestep, mean_pierce_percent_per_timestep)
 
 
-def main(label_list):
+def main(label_list, root):
     # Read the CSV files
-    root = Path("Data_to_Vis")
+
     folders = sorted([file for file in root.iterdir() if file.is_dir()])
 
     # Create dataframe from results of the parameter combination
@@ -114,7 +114,7 @@ def main(label_list):
         data_list.append(process_folder(folder, len(unique_time_array)))
 
     # Process each folder and generate plots for each category
-    categories = ['hyphal length', 'number of branches', 'pierce percentage']
+    categories = ['hyphal length', 'number of branches']
     colors = plt.colormaps["tab10"]
 
     for i, category in enumerate(categories):
@@ -154,5 +154,7 @@ def main(label_list):
 
 
 if __name__ == "__main__":
-    labels = ["$b_{delay}=0 min$", "$b_{delay}=1min$", "$b_{delay}=100µm$"]
-    main(labels)
+    #labels = ["$b_{delay}=0 min$", "$b_{delay}=1min$", "$b_{delay}=100µm$"]
+    root = Path("/home/mwank/Desktop/ExplorativeVis/confinement_ratio_circle_test/Eva,Surface,cAng")
+    labels = ["Evasion", "Nothing", "RandomSurface"]
+    main(labels, root)

@@ -79,43 +79,45 @@ def smallest_enclosing_circle(points):
     return welzl(P, [])
 
 
-# Define file path of Excel file
-file_path = 'DataFiles/AufgereinigteDaten.xlsx'
+if __name__ == "__main__":
 
-# Specify the sheet name
-sheet_name = 'Welzl'
+    # Define file path of Excel file
+    file_path = 'DataFiles/AufgereinigteDaten.xlsx'
 
-# Read the Excel file and select the specified sheet
-df = pd.read_excel(file_path, sheet_name=sheet_name)
+    # Specify the sheet name
+    sheet_name = 'Welzl'
 
-# Group by 'Exp' (Experiment)
-groups = df.groupby(['Exp'])
-circle_radii = []
+    # Read the Excel file and select the specified sheet
+    df = pd.read_excel(file_path, sheet_name=sheet_name)
 
-for experiment_name, experiment_data in groups:
+    # Group by 'Exp' (Experiment)
+    groups = df.groupby(['Exp'])
+    circle_radii = []
 
-    # Group by FilamentID (individual hyphae)
-    hyphae_groups = experiment_data.groupby(["FilamentID"])
+    for experiment_name, experiment_data in groups:
 
-    for hypha_name, hypha_data in hyphae_groups:
+        # Group by FilamentID (individual hyphae)
+        hyphae_groups = experiment_data.groupby(["FilamentID"])
 
-        # Extract the points (Pt Position X, Pt Position Y, Pt Position Z)
-        points = hypha_data[['Pt Position X', 'Pt Position Y']].drop_duplicates()
+        for hypha_name, hypha_data in hyphae_groups:
 
-        # Convert to a list of tuples
-        points_list = list(points.itertuples(index=False, name=None))
+            # Extract the points (Pt Position X, Pt Position Y)
+            points = hypha_data[['Pt Position X', 'Pt Position Y']].drop_duplicates()
 
-        # Skip trivial radius 0 circles
-        if len(points_list) <= 1:
-            continue
+            # Convert to a list of tuples
+            points_list = list(points.itertuples(index=False, name=None))
 
-        # Calculate the smallest circle for hypha
-        circle = smallest_enclosing_circle(points_list)
+            # Skip trivial radius 0 circles
+            if len(points_list) <= 1:
+                continue
 
-        # Add radius of smallest circle
-        circle_radii.append(circle.r)
+            # Calculate the smallest circle for hypha
+            circle = smallest_enclosing_circle(points_list)
 
-mean_circle_radius = np.mean(circle_radii)
-deviation_circle_radius = np.std(circle_radii)
-print(mean_circle_radius)
-print(deviation_circle_radius)
+            # Add radius of smallest circle
+            circle_radii.append(circle.r)
+
+    mean_circle_radius = np.mean(circle_radii)
+    deviation_circle_radius = np.std(circle_radii)
+    print(mean_circle_radius)
+    print(deviation_circle_radius)
