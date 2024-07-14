@@ -10,6 +10,28 @@ import Welzl
 from joblib import Parallel, delayed
 
 
+# Function to decrement the integer part
+def decrement_match(match):
+    number = int(match.group(1)) - 1
+    return f'null_{number}'
+
+
+# Function to split based on 'null' entries
+def split_by_null(df):
+    split_dfs = []
+    current_split = []
+    for idx, row in df.iterrows():
+        if 'null' in row['cellpart_id']:
+            if current_split:
+                split_dfs.append(pd.DataFrame(current_split))
+                current_split = []
+        else:
+            current_split.append(row)
+    if current_split:
+        split_dfs.append(pd.DataFrame(current_split))
+    return split_dfs
+
+
 def distance(P1, P2):
     p1 = np.array(P1)
     p2 = np.array(P2)
@@ -87,7 +109,6 @@ def process_group(group_data, number_of_conidia):
         terminal_points = group[group["cellpart_id"] != "basic"].groupby('cellpart_id').tail(1)
         relevant_points = pd.concat([starting_points, terminal_points], ignore_index=True)
         points_list = list(relevant_points[['x', 'y']].drop_duplicates().itertuples(index=False, name=None))
-
 
         if len(points_list) > 1:
             circle = Welzl.smallest_enclosing_circle(points_list)
@@ -181,6 +202,7 @@ def process_folder(folder):
                                   for group_name, group_data in groups)
 
     return list(zip(*results))
+
 
 def main(mean_length, mean_num_branches, mean_branch_level, mean_HGU, mean_covered_area, pierce_percentage,
          mean_smallest_circle_radius, mean_coverage, mean_confinement_ratio, root, vis_significance):
@@ -351,8 +373,8 @@ def main(mean_length, mean_num_branches, mean_branch_level, mean_HGU, mean_cover
 
 if __name__ == "__main__":
     MEAN_HYPHAL_LENGTH_DATA = 427.0
-    MEAN_NUM_BRANCHES_DATA = 4
-    MEAN_BRANCH_LEVEL_DATA = 2.34
+    MEAN_NUM_BRANCHES_DATA = 4.178
+    MEAN_BRANCH_LEVEL_DATA = 2
     MEAN_HGU_DATA = 106.0
     PIERCE_PERCENTAGE_DATA = 0.12
     MEAN_COVERED_AREA_DATA = 1062

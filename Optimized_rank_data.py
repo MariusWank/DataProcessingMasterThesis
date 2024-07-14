@@ -1,4 +1,5 @@
 import math
+import platform
 import re
 import warnings
 from pathlib import Path
@@ -233,10 +234,24 @@ def main(mean_length, mean_num_branches, mean_branch_level, mean_confinement_rat
     # Step 4: Get the corresponding keys
     top_lowest_keys = [key for key, value in top_lowest]
 
+    # Check the operating system
+    system = platform.system()
+    destination = Path("Data_to_Vis")
+
     for key in top_lowest_keys:
-        os.system('cp -r "{}" Data_to_Vis'.format(key))
-        print(key)
-        print(error_dict[key])
+        if system == "Windows":
+            if os.path.isdir(key):
+                # Use xcopy for directories
+                os.system(f'xcopy /E /I "{key}" "{destination / key.name}\\"')
+            else:
+                # Use copy for files
+                os.system(f'copy "{key}" "{destination}"')
+        else:
+            # Use cp for Unix-based systems
+            if os.path.isdir(key):
+                os.system(f'cp -r "{key}" "{destination}"')
+            else:
+                os.system(f'cp "{key}" "{destination}"')
 
     print("Following folders are faulty:")
     for folder in faulty_folders:
@@ -246,10 +261,10 @@ def main(mean_length, mean_num_branches, mean_branch_level, mean_confinement_rat
 if __name__ == "__main__":
     MEAN_HYPHAL_LENGTH_DATA = 427.0
     MEAN_NUM_BRANCHES_DATA = 4
-    MEAN_BRANCH_LEVEL_DATA = 2.34
+    MEAN_BRANCH_LEVEL_DATA = 2
     MEAN_CONFINEMENT_RATIO_DATA = 0.9
     MEAN_SMALLEST_CIRCLE_RADIUS_DATA = 119
     #root = Path("/media/mwank/TOSHIBA EXT/Masterarbeit_Data/Test_Folder")
-    root = Path("/media/mwank/TOSHIBA EXT/Masterarbeit_Data/cAng_Screen_onlyApi")
+    root = Path("H:\Masterarbeit_Data\FullScreenExcept_cAng0.025_OnlyApi")
     main(MEAN_HYPHAL_LENGTH_DATA, MEAN_NUM_BRANCHES_DATA, MEAN_BRANCH_LEVEL_DATA, MEAN_CONFINEMENT_RATIO_DATA,
          MEAN_SMALLEST_CIRCLE_RADIUS_DATA, root)
