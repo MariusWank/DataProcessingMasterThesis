@@ -10,6 +10,17 @@ import Welzl
 from joblib import Parallel, delayed
 
 
+def t_cdf(t, df):
+    # This function is an approximation. For exact results, a detailed numerical integration is needed.
+    # We'll use the standard library function for error function approximation
+    x = df / (t**2 + df)
+    a = 0.5
+    b = 0.5 * df
+    c = 1.0
+    F = math.exp(math.lgamma(a+b) - math.lgamma(a) - math.lgamma(b)) * (x**a) * ((1-x)**b) * (1/c)
+    return 1 - 0.5 * F
+
+
 # Function to decrement the integer part
 def decrement_match(match):
     number = int(match.group(1)) - 1
@@ -204,33 +215,13 @@ def process_folder(folder):
     return list(zip(*results))
 
 
-def main(mean_length, mean_num_branches, mean_branch_level, mean_HGU, mean_covered_area, pierce_percentage,
-         mean_smallest_circle_radius, mean_coverage, mean_confinement_ratio, root, vis_significance):
+def main(real_mean_values_dict, real_std_values_dict, root, vis_significance, vis_in_vitro_significance):
+
     # Read the CSV files
     folders = sorted([file for file in root.iterdir() if file.is_dir()])
 
-    real_mean_values = {
-        "hyphal length": mean_length,
-        "number of branches": mean_num_branches,
-        "branch level": mean_branch_level,
-        'hyphal growth unit': mean_HGU,
-        'covered area': mean_covered_area,
-        "pierce percentage": pierce_percentage,
-        "confinement ratio": mean_confinement_ratio,
-        "smallest circle radius": mean_smallest_circle_radius,
-        "coverage": mean_coverage
-    }
-
-    usecols = ["id", "time"]  # Specify only the columns you need
-
-    dtype = {
-        "id": "int64",
-        'time': 'int64'
-    }
-
     # Create dataframe from results of the parameter combination
-    df = pd.read_csv(folders[0] / "measurements" / "agent-statistics.csv", delimiter=';', low_memory=False, dtype=dtype,
-                     usecols=usecols)
+    df = pd.read_csv(folders[0] / "measurements" / "agent-statistics.csv", delimiter=';')
     number_of_runs = len(df.groupby(['id']))
     unique_time_df = df.drop_duplicates(subset="time")
     unique_time_array = unique_time_df["time"].to_numpy()
@@ -250,7 +241,10 @@ def main(mean_length, mean_num_branches, mean_branch_level, mean_HGU, mean_cover
 
     error_dict = {folder: {category: {} for category in categories} for folder in folders}
 
-    if vis_significance:
+    if vis_in_vitro_significance:
+        in_vitro_significance_dict = {folder: {category: {} for category in categories} for folder in folders}
+
+    if vis_significance:  #TODO: IMPLEMENT
         rate_of_change_dict = {category: 0 for category in categories}
 
     for i, category in enumerate(categories):
@@ -260,8 +254,8 @@ def main(mean_length, mean_num_branches, mean_branch_level, mean_HGU, mean_cover
 
         # Plot line representing mean value from data
         # Check if the category to match exists in the dictionary
-        if category in real_mean_values:
-            mean_value = real_mean_values[category]
+        if category in real_mean_values_dict:
+            mean_value = real_mean_values_dict[category]
         else:
             print("No mean value to match {} was provided!".format(category))
             continue
@@ -285,6 +279,37 @@ def main(mean_length, mean_num_branches, mean_branch_level, mean_HGU, mean_cover
                 p_values[v, u] = p_val
                 d_values[u, v] = cohens_d
                 d_values[v, u] = cohens_d
+
+        if vis_in_vitro_significance and category in ["branch level", "hyphal length", "smallest circle radius",
+                                                      "number of branches", "confinement ratio"]:
+            data_size = 3
+
+            for j, folder in enumerate(folders):
+                model_values = data_dict[folders[j]][i]
+                model_size = len(model_values)
+                model_mean = np.mean(model_values)
+                model_var = np.var(model_values)
+                data_mean = real_mean_values_dict[category]
+                data_var = real_std_values_dict[category]**2
+                cohens_d = abs((model_mean - data_mean) / ((model_var + data_var) / 2) ** 0.5)
+
+                # Calculate t-statistic
+                t_stat = (model_mean - data_mean) / math.sqrt(model_var / model_size + data_var / data_size)
+
+                # Calculate degrees of freedom
+                numerator = (model_var / model_size + data_var / data_size) ** 2
+                denominator = ((model_var / model_size) ** 2 / (model_size - 1)) + (
+                            (data_var / data_size) ** 2 / (data_size - 1))
+                df = numerator / denominator
+
+                # Calculate the p-value (two-tailed test)
+                p_val = 2 * (1 - t_cdf(abs(t_stat), df))
+
+                # Add values to dictionary
+                in_vitro_significance_dict[folder][category]["p_value"] = p_val
+                in_vitro_significance_dict[folder][category]["df"] = df
+                in_vitro_significance_dict[folder][category]["t_stat"] = t_stat
+                in_vitro_significance_dict[folder][category]["Cohens_d"] = cohens_d
 
         # Plot data in figure
         for j, folder in enumerate(folders):
@@ -310,8 +335,6 @@ def main(mean_length, mean_num_branches, mean_branch_level, mean_HGU, mean_cover
             in_silico_mean = np.mean(category_data)
             relative_error = abs(in_silico_mean - mean_value) / mean_value
             error_dict[folder][category]["Relative Error"] = relative_error
-
-
 
         # Create formatting for all plots
         y_max = max([max(data_dict[folder][i]) for folder in folders])
@@ -369,27 +392,53 @@ def main(mean_length, mean_num_branches, mean_branch_level, mean_HGU, mean_cover
     for key in top_lowest_keys:
         print(key)
         print(error_dict[key])
+        print(in_vitro_significance_dict[key])
 
 
 if __name__ == "__main__":
     MEAN_HYPHAL_LENGTH_DATA = 427.0
-    MEAN_NUM_BRANCHES_DATA = 4.178
-    MEAN_BRANCH_LEVEL_DATA = 2
-    MEAN_HGU_DATA = 106.0
-    PIERCE_PERCENTAGE_DATA = 0.12
+    MEAN_NUM_BRANCHES_DATA = 4
+    MEAN_BRANCH_LEVEL_DATA = 2.34
+    MEAN_HGU_DATA = 106.75
+    PIERCE_PERCENTAGE_DATA = 0.1238
     MEAN_COVERED_AREA_DATA = 1062
     MEAN_SMALLEST_CIRCLE_RADIUS_DATA = 119
     MEAN_COVERAGE_DATA = 0.0238
     MEAN_CONFINEMENT_RATIO_DATA = 0.9
 
-    visualize_significance = False
+    real_mean_values = {
+        "hyphal length":  427.0,
+        "number of branches":  4,
+        "branch level": 2.34,
+        'hyphal growth unit': 106.75,
+        'covered area': 1062,
+        "pierce percentage": 0.1238,
+        "confinement ratio": 0.9,
+        "smallest circle radius": 119,
+        "coverage": 0.0238
+    }
+
+    real_std_values = {
+        "hyphal length": 358,
+        "number of branches": 3,
+        "branch level": 1.13,
+        'hyphal growth unit': 120,
+        'covered area': 967,
+        "pierce percentage": 0.0515,
+        "confinement ratio": 0.1,
+        "smallest circle radius": 74,
+        "coverage": 0.0368
+    }
+
+    visualize_significance = False  # Shows differences between model data
+    vis_in_vitro_significance = not visualize_significance  # Shows difference between model data and in_vitro data
 
     root = Path("Data_to_Vis")
     #root = Path("/media/mwank/TOSHIBA EXT/Masterarbeit_Data/Results/Exporative_NEW/bAng_influence")
     #root = Path("/media/mwank/TOSHIBA EXT/Masterarbeit_Data/Results/Exporative_NEW/bDD_influence")
     #root = Path("/media/mwank/TOSHIBA EXT/Masterarbeit_Data/Results/Exporative_NEW/bLen_influence")
     #root = Path("/media/mwank/TOSHIBA EXT/Masterarbeit_Data/Results/Exporative_NEW/cAng_influence")
-    #root = Path("/media/mwank/TOSHIBA EXT/Masterarbeit_Data/Results/Exporative_NEW/k1_influence")
+    #root = Path(r"H:\Masterarbeit_Data\Results\NewerThanNewest_Results\cAng_Screen_OnlyApi_Winners")
     #root = Path("/media/mwank/TOSHIBA EXT/Masterarbeit_Data/Results/Exporative_NEW/k2_influence")
     #root = Path("/media/mwank/TOSHIBA EXT/Masterarbeit_Data/Results/Exporative_NEW/lSat_influence")
     #root = Path("/media/mwank/TOSHIBA EXT/Masterarbeit_Data/Results/Exporative_NEW/pSym_influence")
@@ -397,5 +446,4 @@ if __name__ == "__main__":
     #root = Path("/media/mwank/TOSHIBA EXT/Masterarbeit_Data/Results/Exporative_NEW/confinement_ratio_circle_test/Lat_vs_Apical/Apical_Vs_Lateral")
     #root = Path("/media/mwank/TOSHIBA EXT/Masterarbeit_Data/Results/Exporative_NEW/confinement_ratio_circle_test/Lat_vs_Apical/lateral_delay")
     #root = Path("/media/mwank/TOSHIBA EXT/Masterarbeit_Data/Results/Exporative_NEW/confinement_ratio_circle_test/Lat_vs_Apical/Symmetry")
-    main(MEAN_HYPHAL_LENGTH_DATA, MEAN_NUM_BRANCHES_DATA, MEAN_BRANCH_LEVEL_DATA, MEAN_HGU_DATA, MEAN_COVERED_AREA_DATA,
-         PIERCE_PERCENTAGE_DATA, MEAN_SMALLEST_CIRCLE_RADIUS_DATA, MEAN_COVERAGE_DATA, MEAN_CONFINEMENT_RATIO_DATA, root, visualize_significance)
+    main(real_mean_values, real_std_values, root, visualize_significance, vis_in_vitro_significance)

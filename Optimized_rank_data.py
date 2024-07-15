@@ -45,6 +45,11 @@ def process_group(group_data, number_of_conidia):
     highest_branch_level_sum = max_branch_levels_per_agentid.sum()
     average_max_branch_level = highest_branch_level_sum / number_of_conidia
 
+    # Get pierce percentage
+    all_pierced_branches = all_branches_df[all_branches_df["pierced"] == 1]
+    all_pierced_conidia = all_pierced_branches.drop_duplicates(subset=["agentid"])
+    pierce_percentage = len(all_pierced_conidia) / number_of_conidia
+
     # Calculate smallest circle radius average
     circle_radii = []
     all_spheres_by_agentid = group_data.groupby("agentid")
@@ -135,8 +140,8 @@ def process_group(group_data, number_of_conidia):
 
     confinement_ratio_per_conidium = np.mean(confinement_ratios)
 
-    return (hyphal_length_per_conidium, number_of_branches_per_conidium,
-            average_max_branch_level, smallest_circle_radius_per_conidium, confinement_ratio_per_conidium)
+    return (hyphal_length_per_conidium, number_of_branches_per_conidium, average_max_branch_level,
+            smallest_circle_radius_per_conidium, confinement_ratio_per_conidium, pierce_percentage)
 
 
 # Function to process a folder and generate plots
@@ -155,14 +160,16 @@ def process_folder(df):
     return list(zip(*results))
 
 
-def main(mean_length, mean_num_branches, mean_branch_level, mean_confinement_ratio, mean_smallest_circle, root):
+def main(mean_length, mean_num_branches, mean_branch_level, mean_confinement_ratio, mean_smallest_circle,
+         mean_pierce_percentage, root):
 
     real_mean_values = {
         "hyphal length": mean_length,
         "number of branches": mean_num_branches,
         "branch level": mean_branch_level,
         "confinement ratio": mean_confinement_ratio,
-        "smallest circle radius": mean_smallest_circle
+        "smallest circle radius": mean_smallest_circle,
+        "pierce percentage": mean_pierce_percentage
     }
 
     # Read the CSV files
@@ -191,7 +198,8 @@ def main(mean_length, mean_num_branches, mean_branch_level, mean_confinement_rat
         faulty_folders.append(folder)
 
     # Process each folder and generate plots for each category
-    categories = ["hyphal length", "number of branches", "branch level", "smallest circle radius", "confinement ratio"]
+    categories = ["hyphal length", "number of branches", "branch level", "smallest circle radius", "confinement ratio",
+                  "pierce percentage"]
     error_dict = {folder: {category: {} for category in categories} for folder in folders}
     for i, category in enumerate(categories):
 
@@ -261,10 +269,11 @@ def main(mean_length, mean_num_branches, mean_branch_level, mean_confinement_rat
 if __name__ == "__main__":
     MEAN_HYPHAL_LENGTH_DATA = 427.0
     MEAN_NUM_BRANCHES_DATA = 4
-    MEAN_BRANCH_LEVEL_DATA = 2
+    MEAN_BRANCH_LEVEL_DATA = 2.34
     MEAN_CONFINEMENT_RATIO_DATA = 0.9
     MEAN_SMALLEST_CIRCLE_RADIUS_DATA = 119
+    MEAN_PIERCE_PERCENTAGE = 0.1238
     #root = Path("/media/mwank/TOSHIBA EXT/Masterarbeit_Data/Test_Folder")
     root = Path("H:\Masterarbeit_Data\FullScreenExcept_cAng0.025_OnlyApi")
     main(MEAN_HYPHAL_LENGTH_DATA, MEAN_NUM_BRANCHES_DATA, MEAN_BRANCH_LEVEL_DATA, MEAN_CONFINEMENT_RATIO_DATA,
-         MEAN_SMALLEST_CIRCLE_RADIUS_DATA, root)
+         MEAN_SMALLEST_CIRCLE_RADIUS_DATA, MEAN_PIERCE_PERCENTAGE, root)
