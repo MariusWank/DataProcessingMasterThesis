@@ -8,17 +8,12 @@ import scipy.stats as stats
 from itertools import combinations
 import Welzl
 from joblib import Parallel, delayed
+from scipy.stats import t
 
 
-def t_cdf(t, df):
-    # This function is an approximation. For exact results, a detailed numerical integration is needed.
-    # We'll use the standard library function for error function approximation
-    x = df / (t**2 + df)
-    a = 0.5
-    b = 0.5 * df
-    c = 1.0
-    F = math.exp(math.lgamma(a+b) - math.lgamma(a) - math.lgamma(b)) * (x**a) * ((1-x)**b) * (1/c)
-    return 1 - 0.5 * F
+def t_cdf(t_stat, df):
+    # Using the scipy.stats t-distribution CDF function
+    return t.cdf(t_stat, df)
 
 
 # Function to decrement the integer part
@@ -260,7 +255,10 @@ def main(real_mean_values_dict, real_std_values_dict, root, vis_significance, vi
             print("No mean value to match {} was provided!".format(category))
             continue
         if not vis_significance:
+            data_std_value = real_std_values_dict[category]
             plt.axhline(y=mean_value, color="black", linestyle="--")
+            plt.axhline(y=mean_value - data_std_value, color="black", linestyle="dotted")
+            plt.axhline(y=mean_value + data_std_value, color="black", linestyle="dotted")
 
         # Create Significance comparison
         if vis_significance:
@@ -282,7 +280,10 @@ def main(real_mean_values_dict, real_std_values_dict, root, vis_significance, vi
 
         if vis_in_vitro_significance and category in ["branch level", "hyphal length", "smallest circle radius",
                                                       "number of branches", "confinement ratio"]:
-            data_size = 3
+            data_size = 60
+
+            if category == "confinement ratio":
+                data_size = 250
 
             for j, folder in enumerate(folders):
                 model_values = data_dict[folders[j]][i]
@@ -351,7 +352,7 @@ def main(real_mean_values_dict, real_std_values_dict, root, vis_significance, vi
         elif category == "smallest circle radius":
             y_label_str += " in µm"
         plt.ylabel(y_label_str)
-        plt.ylim(bottom=0, top=1.5 * y_max)
+        plt.ylim(bottom=0, top=mean_value + real_std_values_dict[category] + 0.05 * y_max)
 
         if vis_significance:
             # Add significance brackets
