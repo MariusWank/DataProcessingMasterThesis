@@ -1,0 +1,45 @@
+hyphalBranch.grow(time):
+    if (growing):
+        old_length = hyphalBranch.length
+        updateLength(time)
+        if (hyphalBranch.length > direction_threshold) hyphalBranch.newDirection()
+        if (length > branch_threshold) hyphalBranch.addBranch()
+        for step_size in hyphalBranch.length - old_length
+            position = hyphalBranch.hyphal_tip + hyphalBranch.direction
+            if (position.not_in_environment()) growing = False; break;
+            elif (noCollision()) hyphalBranch.addNewSphere(position)
+            else hyphalBranch.CollisionHandling()
+            hyphalBranch.hyphal_tip = position
+        hyphalBranch.updateThresholds(time)
+
+    for hyphalBranch in hyphalBranch.branches():
+        hyphalBranch.grow(time)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Initialize_Cells();
+for time in timeSteps:
+    for Cell in Cells:
+        if (no_branches || branch_rate > random) Cell.add_branch()
+        for hyphalBranch in Cell:
+            hyphalBranch.grow(time)
+End_Simulation()
+
+
+
