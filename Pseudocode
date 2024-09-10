@@ -17,22 +17,6 @@ hyphalBranch.grow(time):
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 Initialize_Cells();
 for time in timeSteps:
     for Cell in Cells:

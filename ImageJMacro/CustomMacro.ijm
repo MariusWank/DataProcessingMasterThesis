@@ -27,8 +27,8 @@ for (runIndex = 0; runIndex < fileList.length; runIndex++) {
     // Loop through all PNG files within the run folder
     for (pngIndex = 0; pngIndex < pngFiles.length; pngIndex++) {
 
-        // Check if the PNG file starts with "000600"
-        if (pngFiles[pngIndex].startsWith("000600")) {
+        // Check if the PNG file starts with "000600" and is png
+        if (pngFiles[pngIndex].startsWith("000600") && endsWith(pngFiles[pngIndex], ".png")) {
             // Open the PNG image
             open(runFolder + "/" + pngFiles[pngIndex]);
 
@@ -41,16 +41,13 @@ for (runIndex = 0; runIndex < fileList.length; runIndex++) {
             run("Fractal Box Count...", "box=1,2,3,4,6,8,12,16,32,64,128,256,512,1024 black");
 
             // Get the fractal dimension from the Results table
-            fractalDimension = getResult("D", pngIndex-1);
+            fractalDimension = getResult("D", 0);
         
             // Add the fractal dimension to the total
             totalFractalDimension += fractalDimension;
             imageCount++;
 
             // Close the current image
-            close();
-
-            selectImage("000600k000000.png");
             close();
         }
     }
